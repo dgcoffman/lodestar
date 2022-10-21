@@ -4,7 +4,7 @@ import {Message} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {MessageAcceptance, PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -22,6 +22,8 @@ export enum GossipType {
   // altair
   sync_committee_contribution_and_proof = "sync_committee_contribution_and_proof",
   sync_committee = "sync_committee",
+  // eip4844
+  beacon_block_and_blobs_sidecar = "beacon_block_and_blobs_sidecar",
 }
 
 export enum GossipEncoding {
@@ -48,6 +50,7 @@ export type GossipTopicTypeMap = {
     type: GossipType.sync_committee_contribution_and_proof;
   };
   [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
+  [GossipType.beacon_block_and_blobs_sidecar]: {type: GossipType.beacon_block_and_blobs_sidecar};
 };
 
 export type GossipTopicMap = {
@@ -68,6 +71,7 @@ export type GossipTypeMap = {
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
+  [GossipType.beacon_block_and_blobs_sidecar]: eip4844.SignedBeaconBlockAndBlobsSidecar;
 };
 
 export type GossipFnByType = {

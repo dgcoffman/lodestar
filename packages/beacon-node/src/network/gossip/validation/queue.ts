@@ -17,6 +17,7 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
   [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.sync_committee_contribution_and_proof]: {maxLength: 4096, type: QueueType.LIFO, maxConcurrency: 16},
   [GossipType.sync_committee]: {maxLength: 4096, type: QueueType.LIFO, maxConcurrency: 64},
+  [GossipType.beacon_block_and_blobs_sidecar]: {maxLength: 1024, type: QueueType.FIFO},
 };
 
 /**

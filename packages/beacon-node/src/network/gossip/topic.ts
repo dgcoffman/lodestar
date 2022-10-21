@@ -56,6 +56,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.proposer_slashing:
     case GossipType.attester_slashing:
     case GossipType.sync_committee_contribution_and_proof:
+    case GossipType.beacon_block_and_blobs_sidecar:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
