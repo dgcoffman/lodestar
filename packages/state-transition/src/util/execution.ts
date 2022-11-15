@@ -1,4 +1,4 @@
-import {allForks, bellatrix, capella, isBlindedBeaconBlock, ssz} from "@lodestar/types";
+import {allForks, bellatrix, capella, eip4844, isBlindedBeaconBlock, ssz} from "@lodestar/types";
 import {
   BeaconStateBellatrix,
   BeaconStateCapella,
@@ -114,5 +114,14 @@ export function isCapellaPayload(
   return (
     (payload as capella.ExecutionPayload).withdrawals !== undefined ||
     (payload as capella.ExecutionPayloadHeader).withdrawalsRoot !== undefined
+  );
+}
+
+export function is4844Payload(
+  payload: allForks.FullOrBlindedExecutionPayload
+): payload is eip4844.ExecutionPayload | eip4844.ExecutionPayloadHeader {
+  return (
+    (payload as eip4844.ExecutionPayload).excessDataGas !== undefined ||
+    (payload as eip4844.ExecutionPayloadHeader).excessDataGas !== undefined
   );
 }

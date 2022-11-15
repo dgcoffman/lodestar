@@ -1,12 +1,12 @@
 import {ssz, allForks} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateBellatrix, CachedBeaconStateCapella, CachedBeaconState4844} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {ExecutionEngine} from "../util/executionEngine.js";
-import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
+import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload, is4844Payload} from "../util/execution.js";
 
 export function processExecutionPayload(
-  state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
+  state: CachedBeaconStateBellatrix | CachedBeaconStateCapella | CachedBeaconState4844,
   payload: allForks.FullOrBlindedExecutionPayload,
   executionEngine: ExecutionEngine | null
 ): void {
@@ -78,10 +78,20 @@ export function processExecutionPayload(
 
   // Cache execution payload header
   if (withdrawalsRoot !== undefined) {
-    (state as CachedBeaconStateCapella).latestExecutionPayloadHeader = ssz.capella.ExecutionPayloadHeader.toViewDU({
-      ...bellatrixPayloadFields,
-      withdrawalsRoot,
-    });
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    const excessDataGas = is4844Payload(payload) ? payload.excessDataGas : undefined;
+    if (excessDataGas !== undefined) {
+      (state as CachedBeaconState4844).latestExecutionPayloadHeader = ssz.eip4844.ExecutionPayloadHeader.toViewDU({
+        ...bellatrixPayloadFields,
+        withdrawalsRoot,
+        excessDataGas,
+      });
+    } else {
+      (state as CachedBeaconStateCapella).latestExecutionPayloadHeader = ssz.capella.ExecutionPayloadHeader.toViewDU({
+        ...bellatrixPayloadFields,
+        withdrawalsRoot,
+      });
+    }
   } else {
     (state as CachedBeaconStateBellatrix).latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU(
       bellatrixPayloadFields
