@@ -133,14 +133,12 @@ export class BlockProposingService {
    *   )
    */
   private getBlobsSidecar(block: allForks.FullOrBlindedBeaconBlock, blobs: Blobs): BlobsSidecar {
-    const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
-
-    blobsSidecar.beaconBlockRoot = blindedOrFullBlockHashTreeRoot(this.config, block);
-    blobsSidecar.beaconBlockSlot = block.slot;
-    blobsSidecar.blobs = blobs;
-    blobsSidecar.kzgAggregatedProof = computeAggregateKzgProof(blobs);
-
-    return blobsSidecar;
+    return {
+      beaconBlockRoot: blindedOrFullBlockHashTreeRoot(this.config, block),
+      beaconBlockSlot: block.slot,
+      blobs,
+      kzgAggregatedProof: computeAggregateKzgProof(blobs),
+    };
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {

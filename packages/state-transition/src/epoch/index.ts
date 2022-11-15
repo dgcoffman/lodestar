@@ -46,6 +46,7 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ep
   processEffectiveBalanceUpdates(state, epochProcess);
   processSlashingsReset(state, epochProcess);
   processRandaoMixesReset(state, epochProcess);
+  // EIP-4844 https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#blob-kzg-commitments
   processHistoricalRootsUpdate(state, epochProcess);
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);

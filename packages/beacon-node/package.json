@@ -158,6 +158,7 @@
     "@types/eventsource": "^1.1.5",
     "@types/it-all": "^1.0.0",
     "@types/leveldown": "^4.0.2",
+    "@types/node": "^18.11.9",
     "@types/prometheus-gc-stats": "^0.6.1",
     "@types/supertest": "^2.0.12",
     "@types/tmp": "^0.2.0",

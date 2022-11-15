@@ -148,8 +148,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   return {
     [GossipType.beacon_block_and_blobs_sidecar]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       const {beaconBlock, blobsSidecar: _} = signedBlock;
-      // TODO EIP-4844: Validate blobs
 
+      // TODO EIP-4844: Validate blobs
       return handleBeaconBlock(beaconBlock, topic.fork, peerIdStr, seenTimestampSec);
     },
 

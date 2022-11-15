@@ -1,6 +1,7 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
+export type VersionedHash = ValueOf<typeof ssz.VersionedHash>;
 export type KZGProof = ValueOf<typeof ssz.KZGProof>;
 export type KZGCommitment = ValueOf<typeof ssz.KZGCommitment>;
 export type Blob = ValueOf<typeof ssz.Blob>;
@@ -24,3 +25,10 @@ export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;
 export type BlindedBeaconBlock = ValueOf<typeof ssz.BlindedBeaconBlock>;
 export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
+
+// Constants
+
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#blob
+// TODO EIP-4844 not sure these are correct
+export const BLOB_TX_TYPE = 5;
+export const VERSIONED_HASH_VERSION_KZG = 1;

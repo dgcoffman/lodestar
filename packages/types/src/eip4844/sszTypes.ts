@@ -32,12 +32,6 @@ export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS
 
 const excessDataGas = UintBn256;
 
-// Constants
-
-// TODO EIP-4844: Not sure where these should go
-// export const BLOB_TX_TYPE	uint8(0x05)
-// VERSIONED_HASH_VERSION_KZG	Bytes1(0x01)
-
 // Validator types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md
 

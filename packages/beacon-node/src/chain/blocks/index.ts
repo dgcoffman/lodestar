@@ -51,6 +51,8 @@ export async function processBlocks(
   blocks: allForks.SignedBeaconBlock[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
+  console.log("BLOB SAVING 3. the processBlocks job is running");
+
   if (blocks.length === 0) {
     return; // TODO: or throw?
   } else if (blocks.length > 1) {

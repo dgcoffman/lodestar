@@ -204,7 +204,7 @@ export function getBeaconBlockApi({
     },
 
     async publishBlockWithBlobs(signedBeaconBlockAndBlobsSidecar) {
-      const {beaconBlock} = signedBeaconBlockAndBlobsSidecar;
+      const {beaconBlock, blobsSidecar} = signedBeaconBlockAndBlobsSidecar;
       const {message} = beaconBlock;
 
       const seenTimestampSec = Date.now() / 1000;
@@ -212,11 +212,13 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, message);
 
+      console.log("BLOB SAVING 1. publishBlockWithBlobs is calling chain.processBlock");
+
       await Promise.all([
         network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar),
         // TODO EIP-4844 processBlock for signedBeaconBlockAndBlobsSidecar
         // We need to save the blob?
-        chain.processBlock(beaconBlock).catch((e) => {
+        chain.processBlock(beaconBlock, undefined, blobsSidecar).catch((e) => {
           if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
             network.events.emit(NetworkEvent.unknownBlockParent, beaconBlock, network.peerId.toString());
           }
