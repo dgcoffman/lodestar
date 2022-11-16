@@ -1,5 +1,7 @@
+import {verifyAggregateKzgProof} from "c-kzg";
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, eip4844} from "@lodestar/types";
+import {allForks, altair, eip4844, Root, ssz} from "@lodestar/types";
+import {BlobsSidecar, KZGCommitment} from "@lodestar/types/eip4844";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
@@ -25,6 +27,8 @@ export function processBlock(
   verifySignatures = true,
   executionEngine: ExecutionEngine | null
 ): void {
+  console.log("State Transition processBlock is running");
+
   processBlockHeader(state, block);
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
@@ -47,6 +51,77 @@ export function processBlock(
   // EIP-4844 Block processing
   // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#block-processing
   if (fork >= ForkSeq.eip4844) {
-    processBlobKzgCommitments(block.body as eip4844.BeaconBlockBody);
+    const body = block.body as eip4844.BeaconBlockBody;
+    processBlobKzgCommitments(body);
+
+    // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
+    if (
+      !isDataAvailable(
+        block.slot,
+        ssz.eip4844.BeaconBlock.hashTreeRoot(block as eip4844.BeaconBlock),
+        body.blobKzgCommitments
+      )
+    ) {
+      throw new Error("Expected blobs sidecar not found for EIP-4844 block");
+    }
+  }
+}
+
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#is_data_available
+function isDataAvailable(slot: number, beaconBlockRoot: Root, blobKzgCommitments: KZGCommitment[]): boolean {
+  const sidecar = retrieveBlobsSidecar(slot, beaconBlockRoot);
+  if (!sidecar) {
+    return false;
+  }
+
+  validateBlobsSidecar(slot, beaconBlockRoot, blobKzgCommitments, sidecar);
+  return true;
+}
+
+function retrieveBlobsSidecar(_slot: number, _beaconBlockRoot: Root): BlobsSidecar | undefined {
+  return undefined;
+}
+
+class BlobsSidecarValidationError extends Error {
+  constructor(message: string) {
+    super(`Blobs sidecar validation failed: ${message}`);
+  }
+}
+
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar
+function validateBlobsSidecar(
+  slot: number,
+  beaconBlockRoot: Root,
+  expectedKzgCommitments: KZGCommitment[],
+  blobsSidecar: BlobsSidecar
+): void {
+  // assert slot == blobs_sidecar.beacon_block_slot
+  if (slot != blobsSidecar.beaconBlockSlot) {
+    throw new BlobsSidecarValidationError(
+      `slot mismatch. Block slot: ${slot}, Blob slot ${blobsSidecar.beaconBlockSlot}`
+    );
+  }
+
+  // assert beacon_block_root == blobs_sidecar.beacon_block_root
+  if (beaconBlockRoot !== blobsSidecar.beaconBlockRoot) {
+    throw new BlobsSidecarValidationError(
+      `beacon block root mismatch. Block root: ${beaconBlockRoot}, Blob root ${blobsSidecar.beaconBlockRoot}`
+    );
+  }
+
+  // blobs = blobs_sidecar.blobs
+  // kzg_aggregated_proof = blobs_sidecar.kzg_aggregated_proof
+  const {blobs, kzgAggregatedProof} = blobsSidecar;
+
+  // assert len(expected_kzg_commitments) == len(blobs)
+  if (expectedKzgCommitments.length !== blobs.length) {
+    throw new BlobsSidecarValidationError(
+      `blobs length to commitments length mismatch. Blob length: ${blobs.length}, Expected commitments length ${expectedKzgCommitments.length}`
+    );
+  }
+
+  // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
+  if (!verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof)) {
+    throw new BlobsSidecarValidationError("aggregate KZG proof validation failed.");
   }
 }

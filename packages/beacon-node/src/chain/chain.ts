@@ -390,11 +390,7 @@ export class BeaconChain implements IBeaconChain {
     return {block, blobs: blobs ?? []};
   }
 
-  async processBlock(
-    block: allForks.SignedBeaconBlock,
-    opts?: ImportBlockOpts,
-    blobsSidecar?: BlobsSidecar
-  ): Promise<void> {
+  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
     console.log("BLOB SAVING 2. chain.processBlock is enqueing a processBlocks job");
     return await this.blockProcessor.processBlocksJob([block], opts);
   }

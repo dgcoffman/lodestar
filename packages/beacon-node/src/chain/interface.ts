@@ -5,7 +5,6 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {ILogger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {BlobsSidecar} from "@lodestar/types/eip4844";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
@@ -114,7 +113,7 @@ export interface IBeaconChain {
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock>;
 
   /** Process a block until complete */
-  processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts, blobsSidecar?: BlobsSidecar): Promise<void>;
+  processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
 
