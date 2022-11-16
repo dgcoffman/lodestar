@@ -63,6 +63,12 @@ export abstract class Repository<I extends Id, T> {
     return this.decodeValue(value);
   }
 
+  async getManyBinary(ids: I[]): Promise<Uint8Array[] | null> {
+    const value = await this.db.getMany(ids.map((id) => this.encodeKey(id)));
+    if (!value) return null;
+    return value;
+  }
+
   async getBinary(id: I): Promise<Uint8Array | null> {
     const value = await this.db.get(this.encodeKey(id), this.dbReqOpts);
     if (!value) return null;

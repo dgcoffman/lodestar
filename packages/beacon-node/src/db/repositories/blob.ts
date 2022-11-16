@@ -30,9 +30,4 @@ export class BlobRepository extends Repository<Uint8Array, eip4844.BlobsSidecar>
   decodeValue(data: Buffer): eip4844.BlobsSidecar {
     return ssz.eip4844.BlobsSidecar.deserialize(data);
   }
-
-  async *binaryValuesStreamBySlot(opts?: IBlobsSidecarFilterOptions): AsyncIterable<Uint8Array> {
-    // TODO EIP-4844 Figure out how to write this!
-    yield* this.db.valuesStream(this.dbFilterOptions(opts));
-  }
 }

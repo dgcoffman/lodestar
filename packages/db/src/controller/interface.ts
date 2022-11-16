@@ -48,6 +48,8 @@ export interface IDatabaseController<K, V> {
   batchPut(items: IKeyValue<K, V>[], opts?: DbReqOpts): Promise<void>;
   batchDelete(keys: K[], opts?: DbReqOpts): Promise<void>;
 
+  getMany(keys: K[], opts?: DbReqOpts): Promise<V[] | null>;
+
   // Iterate over entries
 
   keysStream(opts?: IFilterOptions<K>): AsyncIterable<K>;

@@ -20,7 +20,7 @@ export type ReqRespHandlers = {
   onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
 
   // EIP-4844
-  onBlobsSidecarsByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<Uint8Array>;
+  onBlobsSidecarsByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<Uint8Array[]>;
 };
 
 /**
