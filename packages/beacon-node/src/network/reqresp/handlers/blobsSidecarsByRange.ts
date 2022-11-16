@@ -30,7 +30,7 @@ export async function* onBlobsSidecarsByRange(
     slot += 1;
   }
   const roots = getBlockRootsAtSlots(slots, chain);
-  const blobsSidecars = (await db.blob.getManyBinary(roots)) ?? [];
+  const blobsSidecars = (await db.blobsSidecar.getManyBinary(roots)) ?? [];
 
   yield blobsSidecars;
 }

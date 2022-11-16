@@ -15,14 +15,14 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
-  BlobRepository,
+  BlobsSidecarRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   block: BlockRepository;
   blockArchive: BlockArchiveRepository;
-  blob: BlobRepository;
+  blobsSidecar: BlobsSidecarRepository;
   stateArchive: StateArchiveRepository;
 
   voluntaryExit: VoluntaryExitRepository;
@@ -49,7 +49,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(this.config, this.db);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
-    this.blob = new BlobRepository(this.config, this.db);
+    this.blobsSidecar = new BlobsSidecarRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);

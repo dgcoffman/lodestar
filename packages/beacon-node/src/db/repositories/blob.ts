@@ -1,17 +1,11 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Bucket, Db, Repository} from "@lodestar/db";
-import {eip4844, Slot, ssz} from "@lodestar/types";
-
-export type IBlobsSidecarFilterOptions = {
-  gte?: Slot;
-  lt?: Slot;
-};
+import {eip4844, ssz} from "@lodestar/types";
 
 /**
- * Blobs by root
+ * BlobsSidecars by their associated beacon block root
  */
-// TODO This should be named BlobsSidecarRepository
-export class BlobRepository extends Repository<Uint8Array, eip4844.BlobsSidecar> {
+export class BlobsSidecarRepository extends Repository<Uint8Array, eip4844.BlobsSidecar> {
   constructor(config: IChainForkConfig, db: Db) {
     super(config, db, Bucket.eip4844_blobs, ssz.eip4844.BlobsSidecar);
   }

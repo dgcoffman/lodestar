@@ -102,7 +102,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       await validateGossipBlock(config, chain, signedBlock, fork);
       // TODO EIP-4844 Is this correct? It does have to happen before the chain.processBlock below
       if (blobsSidecar) {
-        await db.blob.add(blobsSidecar);
+        await db.blobsSidecar.add(blobsSidecar);
       }
     } catch (e) {
       if (e instanceof BlockGossipError) {
