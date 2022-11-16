@@ -53,7 +53,7 @@ function verifyKzgCommitmentsAgainstTransactions(
  * Offsets are little-endian uint32 values, as defined in the SSZ specification.
  * See the full details of blob_versioned_hashes offset calculation.
  *
- * @param tx
+ * @param opaqueTx
  *
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#tx_peek_blob_versioned_hashes
  */

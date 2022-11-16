@@ -5,6 +5,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {ILogger, prettyBytes} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types/lib/phase0/types.js";
 import {ForkName} from "@lodestar/params";
+import {BlobsSidecar} from "@lodestar/types/eip4844";
 import {IMetrics} from "../../../metrics/index.js";
 import {OpSource} from "../../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -33,6 +34,7 @@ import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
+import {IBeaconDb} from "../../../db/interface.js";
 
 /**
  * Gossip handler options as part of network options
@@ -55,6 +57,7 @@ type ValidatorFnsModules = {
   logger: ILogger;
   network: INetwork;
   metrics: IMetrics | null;
+  db: IBeaconDb;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -74,10 +77,11 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {chain, config, metrics, network, logger} = modules;
+  const {chain, config, metrics, network, logger, db} = modules;
 
   async function handleBeaconBlock(
     signedBlock: SignedBeaconBlock,
+    blobsSidecar: BlobsSidecar | undefined,
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
@@ -96,6 +100,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+      // TODO EIP-4844 Is this correct? It does have to happen before the chain.processBlock below
+      if (blobsSidecar) {
+        await db.blob.add(blobsSidecar);
+      }
     } catch (e) {
       if (e instanceof BlockGossipError) {
         if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
@@ -147,15 +155,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
   return {
     [GossipType.beacon_block_and_blobs_sidecar]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      const {beaconBlock, blobsSidecar: _} = signedBlock;
-
-      // TODO EIP-4844: Persist blobs
-
-      return handleBeaconBlock(beaconBlock, topic.fork, peerIdStr, seenTimestampSec);
+      const {beaconBlock, blobsSidecar} = signedBlock;
+      return handleBeaconBlock(beaconBlock, blobsSidecar, topic.fork, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      return handleBeaconBlock(signedBlock, topic.fork, peerIdStr, seenTimestampSec);
+      return handleBeaconBlock(signedBlock, undefined, topic.fork, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {

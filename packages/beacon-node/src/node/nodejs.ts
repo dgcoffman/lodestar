@@ -184,6 +184,7 @@ export class BeaconNode {
 
     const network = new Network(opts.network, {
       config,
+      db,
       libp2p,
       logger: logger.child({module: LoggerModule.network}),
       metrics,
