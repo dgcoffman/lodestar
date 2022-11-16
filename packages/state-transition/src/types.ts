@@ -22,5 +22,3 @@ export {
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./cache/types.js";
-
-export type BlobsSidecarRetrievalFunction = (beaconBlockRoot: Root) => Promise<BlobsSidecar | null>;

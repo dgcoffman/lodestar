@@ -44,10 +44,11 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       let state = createCachedBeaconStateTest(testcase.pre, testConfig);
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-        state = stateTransition(state, signedBlock, {
+        state = stateTransition(state, signedBlock, undefined, {
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,
+          verifyBlobs: false,
           assertCorrectProgressiveBalances,
         });
       }

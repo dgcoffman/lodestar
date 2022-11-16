@@ -2,7 +2,7 @@ import {blobToKzgCommitment} from "c-kzg";
 import {eip4844} from "@lodestar/types";
 
 import {Blob, KZGCommitment} from "@lodestar/types/eip4844";
-import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition/util/blobs/processBlobKzgCommitments";
+import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition/block";
 
 /**
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
@@ -17,13 +17,6 @@ export function validateBlobsAndKzgCommitments(
   blobs: Blob[],
   blobKzgCommitments: KZGCommitment[]
 ): void {
-  // assert verify_kzg_commitments_against_transactions(execution_payload.transactions, blob_kzg_commitments)
-  if (!verifyKzgCommitmentsAgainstTransactions(executionPayload.transactions, blobKzgCommitments)) {
-    throw new Error(
-      "Error validating execution payload during block construction: Invalid versioned hashes for blob transaction"
-    );
-  }
-
   // assert len(blob_kzg_commitments) == len(blobs)
   if (blobKzgCommitments.length !== blobs.length) {
     throw new Error(
@@ -39,4 +32,11 @@ export function validateBlobsAndKzgCommitments(
       );
     }
   });
+
+  // assert verify_kzg_commitments_against_transactions(execution_payload.transactions, blob_kzg_commitments)
+  if (!verifyKzgCommitmentsAgainstTransactions(executionPayload.transactions, blobKzgCommitments)) {
+    throw new Error(
+      "Error validating execution payload during block construction: Invalid versioned hashes for blob transaction"
+    );
+  }
 }

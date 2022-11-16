@@ -1,7 +1,6 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
-import {BlobsSidecarRetrievalFunction} from "@lodestar/state-transition/lib/types.js";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -20,7 +19,6 @@ export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   metrics: IMetrics | null,
-  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -38,13 +36,14 @@ export async function verifyBlocksStateTransitionOnly(
     const postState = await stateTransition(
       preState,
       block,
-      retrieveBlobsSidecar,
+      undefined,
       {
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
+        verifyBlobs: false,
       },
       metrics
     );

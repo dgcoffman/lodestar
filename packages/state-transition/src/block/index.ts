@@ -1,10 +1,11 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, eip4844, ssz} from "@lodestar/types";
+import {BlobsSidecar} from "@lodestar/types/eip4844";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {BlobsSidecarRetrievalFunction, CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
 import {isDataAvailable} from "../util/blobs/isDataAvailable.js";
-import {processBlobKzgCommitments} from "../util/blobs/processBlobKzgCommitments.js";
+import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -18,14 +19,20 @@ export * from "./processOperations.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
 
-export async function processBlock(
+// EIP-4844 to allow beacon-node to import this function in
+// packages/beacon-node/src/chain/produceBlock/validateBlobsAndKzgCommitments.ts
+// I'm sure there's a beter way to do this.
+export {verifyKzgCommitmentsAgainstTransactions} from "./processBlobKzgCommitments.js";
+
+export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock,
   verifySignatures = true,
   executionEngine: ExecutionEngine | null,
-  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction
-): Promise<void> {
+  blobsSidecar: BlobsSidecar | undefined,
+  verifyBlobs = true
+): void {
   processBlockHeader(state, block);
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
@@ -53,12 +60,13 @@ export async function processBlock(
 
     // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
     if (
-      !(await isDataAvailable(
-        retrieveBlobsSidecar,
+      verifyBlobs &&
+      !isDataAvailable(
+        blobsSidecar,
         block.slot,
         ssz.eip4844.BeaconBlock.hashTreeRoot(block as eip4844.BeaconBlock),
         body.blobKzgCommitments
-      ))
+      )
     ) {
       throw new Error("Expected blobs sidecar not found for EIP-4844 block");
     }

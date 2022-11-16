@@ -221,10 +221,11 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = await stateTransition(state, block, db.blobsSidecar.get, {
+    state = await stateTransition(state, block, undefined, {
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,
+      verifyBlobs: false,
     });
     // yield to the event loop
     await sleep(0);

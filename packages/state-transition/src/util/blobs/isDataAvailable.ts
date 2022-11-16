@@ -1,7 +1,6 @@
 import {KZGCommitment, verifyAggregateKzgProof} from "c-kzg";
 import {Root} from "@lodestar/types";
 import {BlobsSidecar} from "@lodestar/types/eip4844";
-import {BlobsSidecarRetrievalFunction} from "../../types.js";
 
 /**
  *
@@ -20,13 +19,12 @@ import {BlobsSidecarRetrievalFunction} from "../../types.js";
  * @param blobKzgCommitments
  * @returns
  */
-export async function isDataAvailable(
-  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction,
+export function isDataAvailable(
+  sidecar: BlobsSidecar | undefined,
   slot: number,
   beaconBlockRoot: Root,
   blobKzgCommitments: KZGCommitment[]
-): Promise<boolean> {
-  const sidecar = await retrieveBlobsSidecar(beaconBlockRoot);
+): boolean {
   if (!sidecar) {
     return false;
   }

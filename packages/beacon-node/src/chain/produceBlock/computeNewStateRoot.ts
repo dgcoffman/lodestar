@@ -1,5 +1,4 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {BlobsSidecarRetrievalFunction} from "@lodestar/state-transition/types";
 
 import {allForks, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
@@ -17,8 +16,7 @@ export {BlockType, AssembledBlockType};
 export async function computeNewStateRoot(
   metrics: IMetrics | null,
   state: CachedBeaconStateAllForks,
-  block: allForks.FullOrBlindedBeaconBlock,
-  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction
+  block: allForks.FullOrBlindedBeaconBlock
 ): Promise<Root> {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
@@ -26,11 +24,12 @@ export async function computeNewStateRoot(
   const postState = await stateTransition(
     state,
     blockEmptySig,
-    retrieveBlobsSidecar,
+    undefined,
     // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
     // verifyProposer: false   | as the block signature is zero-ed
     // verifySignatures: false | since the data to assemble the block is trusted
-    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false},
+    // verifyBlobs: false      | since we do not have blobs saved yet
+    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false, verifyBlobs: false},
     metrics
   );
 

@@ -172,11 +172,12 @@ export class StateRegenerator implements IStateRegenerator {
         state = await stateTransition(
           state,
           block,
-          this.modules.db.blobsSidecar.get,
+          undefined,
           {
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,
+            verifyBlobs: false,
           },
           null
         );

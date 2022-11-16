@@ -12,13 +12,14 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, eip4844, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, eip4844, Slot, RootHex, Epoch, ValidatorIndex, ssz} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
+import {BlobsSidecar} from "@lodestar/types/lib/eip4844/types.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -384,7 +385,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    block.stateRoot = await computeNewStateRoot(this.metrics, state, block, this.db.blobsSidecar.get);
+    block.stateRoot = await computeNewStateRoot(this.metrics, state, block);
 
     return {block, blobs: blobs ?? []};
   }

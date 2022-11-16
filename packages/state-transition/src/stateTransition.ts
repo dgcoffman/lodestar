@@ -2,6 +2,7 @@
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {BlobsSidecar} from "@lodestar/types/eip4844";
 import {IBeaconStateTransitionMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {
@@ -10,7 +11,6 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
-  BlobsSidecarRetrievalFunction,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -30,6 +30,7 @@ export type StateTransitionOpts = EpochProcessOpts & {
   verifyStateRoot?: boolean;
   verifyProposer?: boolean;
   verifySignatures?: boolean;
+  verifyBlobs?: boolean;
 };
 
 /**
@@ -38,11 +39,11 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export async function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction,
+  blobsSidecar?: BlobsSidecar,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): Promise<CachedBeaconStateAllForks> {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true, verifyBlobs = true} = options || {};
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -69,7 +70,7 @@ export async function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    await processBlock(fork, postState, block, verifySignatures, null, retrieveBlobsSidecar);
+    processBlock(fork, postState, block, verifySignatures, null, blobsSidecar, verifyBlobs);
   } finally {
     timer?.();
   }

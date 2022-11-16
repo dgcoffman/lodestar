@@ -119,10 +119,11 @@ describe("altair processBlock", () => {
           return {state: stateCloned, block};
         },
         fn: ({state, block}) => {
-          const postState = stateTransition(state, block, {
+          const postState = stateTransition(state, block, undefined, {
             verifyProposer: false,
             verifySignatures: false,
             verifyStateRoot: false,
+            verifyBlobs: false,
           });
 
           // Not necessary to call commit here since it's called inside .stateTransition()

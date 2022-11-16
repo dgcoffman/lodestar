@@ -11,6 +11,7 @@ import {
   ValidatorIndex,
   BLSPubkey,
   BLSSignature,
+  capella,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -124,6 +125,13 @@ export async function produceBlockBody<T extends BlockType>(
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
 
+    // Capella and later forks have blsToExecutionChanges on BeaconBlockBody
+    if (forkSeq >= ForkSeq.capella) {
+      console.log("Building a block body for Capella or later -- assigning blsToExecutionChanges");
+      // TODO EIP-4844 How should this actually be set? Capella
+      (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
+    }
+
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
 
@@ -181,7 +189,23 @@ export async function produceBlockBody<T extends BlockType>(
           const payload = await this.executionEngine.getPayload(payloadId);
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
+          if (forkSeq >= ForkSeq.capella) {
+            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
+            if ((blockBody as capella.BeaconBlockBody).executionPayload.withdrawals === undefined) {
+              console.log(
+                "In Capella, but the EC returns an execution payload without withdrawals, assigning empty array"
+              );
+
+              (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
+            }
+          }
+
           if (forkSeq >= ForkSeq.eip4844) {
+            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
+            // if (payload === undefined) {
+            //   (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
+            // }
+
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
             validateBlobsAndKzgCommitments(
