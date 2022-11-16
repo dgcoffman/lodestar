@@ -1,4 +1,5 @@
 export {BlockRepository} from "./block.js";
+export {BlobRepository} from "./blob.js";
 export {BlockArchiveBatchPutBinaryItem, BlockArchiveRepository, IBlockFilterOptions} from "./blockArchive.js";
 export {StateArchiveRepository} from "./stateArchive.js";
 

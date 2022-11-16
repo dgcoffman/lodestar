@@ -1,0 +1,28 @@
+import {IChainForkConfig} from "@lodestar/config";
+import {Bucket, Db, Repository} from "@lodestar/db";
+import {eip4844, ssz} from "@lodestar/types";
+
+/**
+ * Blobs by root
+ */
+export class BlobRepository extends Repository<Uint8Array, eip4844.BlobsSidecar> {
+  constructor(config: IChainForkConfig, db: Db) {
+    super(config, db, Bucket.eip4844_blobs, ssz.eip4844.BlobsSidecar);
+  }
+
+  /**
+   * Id is hashTreeRoot of unsigned BeaconBlock
+   */
+  getId(value: eip4844.BlobsSidecar): Uint8Array {
+    // TODO EIP-4844 is this the right ID?
+    return ssz.eip4844.BlobsSidecar.hashTreeRoot(value);
+  }
+
+  encodeValue(value: eip4844.BlobsSidecar): Buffer {
+    return ssz.eip4844.BlobsSidecar.serialize(value) as Buffer;
+  }
+
+  decodeValue(data: Buffer): eip4844.BlobsSidecar {
+    return ssz.eip4844.BlobsSidecar.deserialize(data);
+  }
+}

@@ -66,6 +66,8 @@ export enum Bucket {
   validator_metaData = 41,
 
   backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
+
+  eip4844_blobs = 43,
 }
 
 export enum Key {

@@ -214,11 +214,15 @@ export function getBeaconBlockApi({
 
       console.log("BLOB SAVING 1. publishBlockWithBlobs is calling chain.processBlock");
 
+      await db.blob.add(blobsSidecar);
+
+      console.log("Persisted blobsSidecar to the database");
+
       await Promise.all([
         network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar),
         // TODO EIP-4844 processBlock for signedBeaconBlockAndBlobsSidecar
         // We need to save the blob?
-        chain.processBlock(beaconBlock, undefined, blobsSidecar).catch((e) => {
+        chain.processBlock(beaconBlock).catch((e) => {
           if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
             network.events.emit(NetworkEvent.unknownBlockParent, beaconBlock, network.peerId.toString());
           }
