@@ -11,7 +11,6 @@ import {
   ValidatorIndex,
   BLSPubkey,
   BLSSignature,
-  capella,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -149,14 +148,6 @@ export async function produceBlockBody<T extends BlockType>(
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
-
-      // Capella and later forks have withdrawalRoot on their ExecutionPayloadHeader
-      // TODO Capella: Remove this. It will come from the execution client.
-      if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
-        (blockBody as capella.BlindedBeaconBlockBody).executionPayloadHeader.withdrawalsRoot = Uint8Array.from(
-          Buffer.alloc(32, 0)
-        );
-      }
     } else {
       // try catch payload fetch here, because there is still a recovery path possible if we
       // are pre-merge. We don't care the same for builder segment as the execution block

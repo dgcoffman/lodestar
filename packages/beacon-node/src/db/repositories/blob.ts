@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {Bucket, Db, IKeyValue, Repository} from "@lodestar/db";
+import {Bucket, Db, Repository} from "@lodestar/db";
 import {eip4844, Slot, ssz} from "@lodestar/types";
 
 export type IBlobsSidecarFilterOptions = {
