@@ -1,6 +1,7 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
+import {IBeaconDb} from "../../db/interface.js";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockType, AssembledBlockType} from "./produceBlockBody.js";
 
@@ -14,7 +15,8 @@ export {BlockType, AssembledBlockType};
 export function computeNewStateRoot(
   metrics: IMetrics | null,
   state: CachedBeaconStateAllForks,
-  block: allForks.FullOrBlindedBeaconBlock
+  block: allForks.FullOrBlindedBeaconBlock,
+  db: IBeaconDb
 ): Root {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
@@ -22,6 +24,7 @@ export function computeNewStateRoot(
   const postState = stateTransition(
     state,
     blockEmptySig,
+    db,
     // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
     // verifyProposer: false   | as the block signature is zero-ed
     // verifySignatures: false | since the data to assemble the block is trusted

@@ -2,6 +2,7 @@ import {verifyAggregateKzgProof} from "c-kzg";
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, eip4844, Root, ssz} from "@lodestar/types";
 import {BlobsSidecar, KZGCommitment} from "@lodestar/types/eip4844";
+import {IBeaconDb} from "@lodestar/db";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
@@ -12,7 +13,6 @@ import {processEth1Data} from "./processEth1Data.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
-
 // Spec tests
 export {processBlockHeader, processExecutionPayload, processRandao, processEth1Data, processSyncAggregate};
 export * from "./processOperations.js";
@@ -25,7 +25,8 @@ export function processBlock(
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock,
   verifySignatures = true,
-  executionEngine: ExecutionEngine | null
+  executionEngine: ExecutionEngine | null,
+  db: IBeaconDb
 ): void {
   console.log("State Transition processBlock is running");
 
@@ -57,6 +58,7 @@ export function processBlock(
     // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
     if (
       !isDataAvailable(
+        db,
         block.slot,
         ssz.eip4844.BeaconBlock.hashTreeRoot(block as eip4844.BeaconBlock),
         body.blobKzgCommitments
@@ -68,8 +70,13 @@ export function processBlock(
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#is_data_available
-function isDataAvailable(slot: number, beaconBlockRoot: Root, blobKzgCommitments: KZGCommitment[]): boolean {
-  const sidecar = retrieveBlobsSidecar(slot, beaconBlockRoot);
+function isDataAvailable(
+  db: IBeaconDb,
+  slot: number,
+  beaconBlockRoot: Root,
+  blobKzgCommitments: KZGCommitment[]
+): boolean {
+  const sidecar = db.blob.get(beaconBlockRoot);
   if (!sidecar) {
     return false;
   }

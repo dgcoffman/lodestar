@@ -172,6 +172,7 @@ export class StateRegenerator implements IStateRegenerator {
         state = stateTransition(
           state,
           block,
+          this.modules.db,
           {
             verifyStateRoot: false,
             verifyProposer: false,

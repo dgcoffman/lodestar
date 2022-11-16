@@ -11,11 +11,10 @@ export class BlobRepository extends Repository<Uint8Array, eip4844.BlobsSidecar>
   }
 
   /**
-   * Id is hashTreeRoot of unsigned BeaconBlock
+   * Id is hashTreeRoot of the associated BeaconBlock
    */
   getId(value: eip4844.BlobsSidecar): Uint8Array {
-    // TODO EIP-4844 is this the right ID?
-    return ssz.eip4844.BlobsSidecar.hashTreeRoot(value);
+    return value.beaconBlockRoot;
   }
 
   encodeValue(value: eip4844.BlobsSidecar): Buffer {

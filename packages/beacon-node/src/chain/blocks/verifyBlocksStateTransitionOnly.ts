@@ -1,6 +1,7 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
+import {IBeaconDb} from "@lodestar/beacon-node/db";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -19,6 +20,7 @@ export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   metrics: IMetrics | null,
+  db: IBeaconDb,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -36,6 +38,7 @@ export async function verifyBlocksStateTransitionOnly(
     const postState = stateTransition(
       preState,
       block,
+      db,
       {
         // false because it's verified below with better error typing
         verifyStateRoot: false,

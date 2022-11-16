@@ -221,7 +221,7 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = stateTransition(state, block, {
+    state = stateTransition(state, block, db, {
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,

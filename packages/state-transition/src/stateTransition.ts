@@ -2,6 +2,7 @@
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {IBeaconDb} from "../../beacon-node/src/db/index.js";
 import {IBeaconStateTransitionMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {
@@ -37,6 +38,7 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+  db: IBeaconDb,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
@@ -67,7 +69,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, verifySignatures, null);
+    processBlock(fork, postState, block, verifySignatures, null, db);
   } finally {
     timer?.();
   }
