@@ -2,7 +2,6 @@
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconDb} from "../../beacon-node/src/db/index.js";
 import {IBeaconStateTransitionMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {
@@ -11,6 +10,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  BlobsSidecarRetrievalFunction,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -35,13 +35,13 @@ export type StateTransitionOpts = EpochProcessOpts & {
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
-export function stateTransition(
+export async function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  db: IBeaconDb,
+  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
-): CachedBeaconStateAllForks {
+): Promise<CachedBeaconStateAllForks> {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   const block = signedBlock.message;
@@ -69,7 +69,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, verifySignatures, null, db);
+    await processBlock(fork, postState, block, verifySignatures, null, retrieveBlobsSidecar);
   } finally {
     timer?.();
   }

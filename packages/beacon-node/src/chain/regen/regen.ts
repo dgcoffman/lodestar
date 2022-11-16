@@ -169,10 +169,10 @@ export class StateRegenerator implements IStateRegenerator {
       try {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
-        state = stateTransition(
+        state = await stateTransition(
           state,
           block,
-          this.modules.db,
+          this.modules.db.blob.get,
           {
             verifyStateRoot: false,
             verifyProposer: false,

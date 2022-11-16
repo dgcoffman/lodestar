@@ -2,10 +2,9 @@ import {verifyAggregateKzgProof} from "c-kzg";
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, eip4844, Root, ssz} from "@lodestar/types";
 import {BlobsSidecar, KZGCommitment} from "@lodestar/types/eip4844";
-import {IBeaconDb} from "@lodestar/db";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
+import {BlobsSidecarRetrievalFunction, CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -20,14 +19,14 @@ export * from "./processOperations.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
 
-export function processBlock(
+export async function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock,
   verifySignatures = true,
   executionEngine: ExecutionEngine | null,
-  db: IBeaconDb
-): void {
+  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction
+): Promise<void> {
   console.log("State Transition processBlock is running");
 
   processBlockHeader(state, block);
@@ -57,12 +56,12 @@ export function processBlock(
 
     // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
     if (
-      !isDataAvailable(
-        db,
+      !(await isDataAvailable(
+        retrieveBlobsSidecar,
         block.slot,
         ssz.eip4844.BeaconBlock.hashTreeRoot(block as eip4844.BeaconBlock),
         body.blobKzgCommitments
-      )
+      ))
     ) {
       throw new Error("Expected blobs sidecar not found for EIP-4844 block");
     }
@@ -70,23 +69,19 @@ export function processBlock(
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#is_data_available
-function isDataAvailable(
-  db: IBeaconDb,
+async function isDataAvailable(
+  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction,
   slot: number,
   beaconBlockRoot: Root,
   blobKzgCommitments: KZGCommitment[]
-): boolean {
-  const sidecar = db.blob.get(beaconBlockRoot);
+): Promise<boolean> {
+  const sidecar = await retrieveBlobsSidecar(beaconBlockRoot);
   if (!sidecar) {
     return false;
   }
 
   validateBlobsSidecar(slot, beaconBlockRoot, blobKzgCommitments, sidecar);
   return true;
-}
-
-function retrieveBlobsSidecar(_slot: number, _beaconBlockRoot: Root): BlobsSidecar | undefined {
-  return undefined;
 }
 
 class BlobsSidecarValidationError extends Error {

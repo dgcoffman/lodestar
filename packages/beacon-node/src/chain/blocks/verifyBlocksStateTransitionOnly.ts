@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
-import {IBeaconDb} from "@lodestar/beacon-node/db";
+import {BlobsSidecarRetrievalFunction} from "@lodestar/state-transition/lib/types.js";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -20,7 +20,7 @@ export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   metrics: IMetrics | null,
-  db: IBeaconDb,
+  retrieveBlobsSidecar: BlobsSidecarRetrievalFunction,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -35,10 +35,10 @@ export async function verifyBlocksStateTransitionOnly(
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = stateTransition(
+    const postState = await stateTransition(
       preState,
       block,
-      db,
+      retrieveBlobsSidecar,
       {
         // false because it's verified below with better error typing
         verifyStateRoot: false,

@@ -384,7 +384,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    block.stateRoot = computeNewStateRoot(this.metrics, state, block);
+    block.stateRoot = await computeNewStateRoot(this.metrics, state, block, this.db.blob.get);
 
     return {block, blobs: blobs ?? []};
   }
