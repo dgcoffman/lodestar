@@ -32,7 +32,7 @@ export function processBlobKzgCommitments({executionPayload, blobKzgCommitments}
 //         if tx[0] == BLOB_TX_TYPE:
 //             all_versioned_hashes += tx_peek_blob_versioned_hashes(tx)
 //     return all_versioned_hashes == [kzg_commitment_to_versioned_hash(commitment) for commitment in kzg_commitments]
-function verifyKzgCommitmentsAgainstTransactions(
+export function verifyKzgCommitmentsAgainstTransactions(
   transactions: Transaction[],
   kzgCommitments: BlobKzgCommitments
 ): boolean {

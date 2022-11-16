@@ -24,14 +24,14 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
-
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -116,6 +116,7 @@ export async function produceBlockBody<T extends BlockType>(
     );
   }
 
+  const forkSeq = currentState.config.getForkSeq(blockSlot);
   const forkName = currentState.config.getForkName(blockSlot);
 
   if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
@@ -123,12 +124,6 @@ export async function produceBlockBody<T extends BlockType>(
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
-
-    // Capella and later forks have blsToExecutionChanges on BeaconBlockBody
-    // It would be nicer to use ForkSeq, but that doesn't narrow the type appropriately
-    if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
-      (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
-    }
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
@@ -195,16 +190,15 @@ export async function produceBlockBody<T extends BlockType>(
           const payload = await this.executionEngine.getPayload(payloadId);
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
-          // Capella and later forks have withdrawals on their ExecutionPayload
-          if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
-            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
-            (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
-          }
-
-          if (forkName === ForkName.eip4844) {
+          if (forkSeq >= ForkSeq.eip4844) {
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
-            // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec
+            validateBlobsAndKzgCommitments(
+              payload as eip4844.ExecutionPayload,
+              blobsBundle.blobs ?? [],
+              blobsBundle.kzgs ?? []
+            );
+
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];
             blobs = blobsBundle.blobs;
           }
