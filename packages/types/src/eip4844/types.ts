@@ -32,3 +32,6 @@ export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlo
 // TODO EIP-4844 not sure these are correct
 export const BLOB_TX_TYPE = 5;
 export const VERSIONED_HASH_VERSION_KZG = 1;
+
+// P2P
+export type BlobsSidecarsByRangeRequest = ValueOf<typeof ssz.BlobsSidecarsByRangeRequest>;

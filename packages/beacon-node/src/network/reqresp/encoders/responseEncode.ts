@@ -106,12 +106,13 @@ export function getForkNameFromResponseBody<K extends Method>(
 
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-    case Method.BlobsSidecarByRange:
       return config.getForkName(requestTyped.body.slot);
     case Method.LightClientBootstrap:
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:
     case Method.LightClientOptimisticUpdate:
       return ForkName.altair;
+    case Method.BlobsSidecarsByRange:
+      return ForkName.eip4844;
   }
 }

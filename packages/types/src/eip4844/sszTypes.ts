@@ -116,6 +116,14 @@ export const BlobsSidecar = new ContainerType(
   {typeName: "BlobsSidecar", jsonCase: "eth2"}
 );
 
+export const BlobsSidecarsByRangeRequest = new ContainerType(
+  {
+    startSlot: Slot,
+    count: UintNum64,
+  },
+  {typeName: "BlobsSidecarsByRangeRequest", jsonCase: "eth2"}
+);
+
 export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
   {
     beaconBlock: SignedBeaconBlock,

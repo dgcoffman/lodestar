@@ -4,7 +4,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -108,6 +108,20 @@ export class ReqResp implements IReqResp {
     // Only request V1 if forcing phase0 fork. It's safe to not specify `fork` and let stream negotiation pick the version
     const versions = fork === ForkName.phase0 ? [Version.V1] : [Version.V2, Version.V1];
     return await this.sendRequest<allForks.Metadata>(peerId, Method.Metadata, versions, null);
+  }
+
+  async blobsSidecarsByRange(
+    peerId: PeerId,
+    request: eip4844.BlobsSidecarsByRangeRequest
+  ): Promise<eip4844.BlobsSidecar[]> {
+    const blobSidecars = await this.sendRequest<eip4844.BlobsSidecar[]>(
+      peerId,
+      Method.BlobsSidecarsByRange,
+      [Version.V1],
+      request,
+      request.count
+    );
+    return blobSidecars;
   }
 
   async beaconBlocksByRange(

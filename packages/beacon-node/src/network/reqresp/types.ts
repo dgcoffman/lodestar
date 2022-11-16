@@ -17,7 +17,7 @@ export enum Method {
   LightClientFinalityUpdate = "light_client_finality_update",
   LightClientOptimisticUpdate = "light_client_optimistic_update",
   // EIP-4844
-  BlobsSidecarByRange = "blobs_sidecars_by_range",
+  BlobsSidecarsByRange = "blobs_sidecars_by_range",
 }
 
 /** RPC Versions */
@@ -48,7 +48,7 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.Metadata, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRange, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.BlobsSidecarByRange, Version.V1, Encoding.SSZ_SNAPPY], // TODO EIP-4844 V1 or V2? I don't know.
+  [Method.BlobsSidecarsByRange, Version.V1, Encoding.SSZ_SNAPPY], // TODO EIP-4844 V1 or V2? I don't know.
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.LightClientBootstrap, Version.V1, Encoding.SSZ_SNAPPY],
@@ -64,7 +64,7 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.Metadata]: true,
   [Method.BeaconBlocksByRange]: false, // A stream, 0 or more response chunks
   [Method.BeaconBlocksByRoot]: false,
-  [Method.BlobsSidecarByRange]: false,
+  [Method.BlobsSidecarsByRange]: false,
   [Method.LightClientBootstrap]: true,
   [Method.LightClientUpdate]: false,
   [Method.LightClientFinalityUpdate]: true,
@@ -91,7 +91,7 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:
     case Method.LightClientOptimisticUpdate:
-    case Method.BlobsSidecarByRange: // EIP-4844 Guessing...
+    case Method.BlobsSidecarsByRange: // EIP-4844 Guessing...
       return ContextBytesType.ForkDigest;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
@@ -122,8 +122,8 @@ export function getRequestSzzTypeByMethod(method: Method) {
       return ssz.phase0.BeaconBlocksByRangeRequest;
     case Method.BeaconBlocksByRoot:
       return ssz.phase0.BeaconBlocksByRootRequest;
-    case Method.BlobsSidecarByRange:
-      return ssz.eip4844.BlobsSidecar;
+    case Method.BlobsSidecarsByRange:
+      return ssz.eip4844.BlobsSidecarsByRangeRequest;
     case Method.LightClientBootstrap:
       return ssz.Root;
     case Method.LightClientUpdate:
@@ -138,7 +138,7 @@ export type RequestBodyByMethod = {
   [Method.Metadata]: null;
   [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
-  [Method.BlobsSidecarByRange]: phase0.BeaconBlocksByRangeRequest;
+  [Method.BlobsSidecarsByRange]: eip4844.BlobsSidecarsByRangeRequest;
   [Method.LightClientBootstrap]: Root;
   [Method.LightClientUpdate]: altair.LightClientUpdatesByRange;
   [Method.LightClientFinalityUpdate]: null;
@@ -160,7 +160,7 @@ export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkNam
       const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
       return ssz[fork].Metadata;
     }
-    case Method.BlobsSidecarByRange:
+    case Method.BlobsSidecarsByRange:
       return ssz.eip4844.BlobsSidecar;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
@@ -194,8 +194,8 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       return reqRespBlockResponseSerializer;
-    case Method.BlobsSidecarByRange:
-      return ssz.eip4844.BlobsSidecar; // Is this right?
+    case Method.BlobsSidecarsByRange:
+      return ssz.eip4844.BlobsSidecar;
     case Method.LightClientBootstrap:
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
@@ -223,14 +223,14 @@ type CommonResponseBodyByMethod = {
 export type OutgoingResponseBodyByMethod = CommonResponseBodyByMethod & {
   [Method.BeaconBlocksByRange]: ReqRespBlockResponse;
   [Method.BeaconBlocksByRoot]: ReqRespBlockResponse;
-  [Method.BlobsSidecarByRange]: ReqRespBlockResponse; // TODO EIP-4844 this is wrong
+  [Method.BlobsSidecarsByRange]: Uint8Array; // TODO EIP-4844 Not sure
 };
 
 // p2p protocol in the spec
 export type IncomingResponseBodyByMethod = CommonResponseBodyByMethod & {
   [Method.BeaconBlocksByRange]: allForks.SignedBeaconBlock;
   [Method.BeaconBlocksByRoot]: allForks.SignedBeaconBlock;
-  [Method.BlobsSidecarByRange]: eip4844.BlobsSidecar;
+  [Method.BlobsSidecarsByRange]: eip4844.BlobsSidecar;
 };
 
 // Helper types to generically define the arguments of the encoder functions
