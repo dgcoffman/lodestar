@@ -73,7 +73,11 @@ export class Validator {
     const loggerVc = getLoggerVc(logger, clock);
 
     // Load our KZG trusted setup into C-KZG for later use
-    loadTrustedSetup("trusted_setup.txt");
+    try {
+      loadTrustedSetup("trusted_setup.txt");
+    } catch (e) {
+      logger.warn("Validator node did not load trusted setup: ", undefined, e as Error);
+    }
 
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {

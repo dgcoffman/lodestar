@@ -2,6 +2,7 @@ import {setMaxListeners} from "node:events";
 import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
+import {loadTrustedSetup} from "c-kzg";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
@@ -143,6 +144,13 @@ export class BeaconNode {
 
     // start db if not already started
     await db.start();
+
+    // Load our KZG trusted setup into C-KZG for later use
+    try {
+      loadTrustedSetup("trusted_setup.txt");
+    } catch (e) {
+      logger.warn("Beacon node did not load trusted setup: ", undefined, e as Error);
+    }
 
     let metrics = null;
     if (opts.metrics.enabled) {

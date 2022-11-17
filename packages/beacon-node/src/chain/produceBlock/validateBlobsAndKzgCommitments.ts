@@ -23,15 +23,30 @@ export function validateBlobsAndKzgCommitments(
       `Error validating execution payload during block construction: Blobs length of ${blobs.length} did not match KZG commitments lenght of ${blobKzgCommitments.length}`
     );
   }
+  console.log("validateBlobsAndKzgCommitments: lengths match");
 
   // assert [blob_to_kzg_commitment(blob) == commitment for blob, commitment in zip(blobs, blob_kzg_commitments)]
   blobs.forEach((blob, index) => {
-    if (blobToKzgCommitment(blob) !== blobKzgCommitments[index]) {
-      throw new Error(
-        `Error validating execution payload during block construction: KZG commitment supplied by execution client does not match that computed by Lodestar, at index ${index}`
-      );
+    try {
+      const computedCommitment = blobToKzgCommitment(blob);
+      if (computedCommitment !== blobKzgCommitments[index]) {
+        throw new Error(
+          `Error validating execution payload during block construction: KZG commitment supplied by execution client does not match that computed by Lodestar, at index ${index}`
+        );
+      } else {
+        console.log(
+          `validateBlobsAndKzgCommitments: blob at index ${index} has a matching commitment.`,
+          computedCommitment,
+          blobKzgCommitments[index]
+        );
+      }
+    } catch (e) {
+      console.log("validateBlobsAndKzgCommitments error in blobToKzgCommitment", e);
+      console.log(typeof blob, blob);
     }
   });
+
+  console.log("validateBlobsAndKzgCommitments: KZG commitments match");
 
   // assert verify_kzg_commitments_against_transactions(execution_payload.transactions, blob_kzg_commitments)
   if (!verifyKzgCommitmentsAgainstTransactions(executionPayload.transactions, blobKzgCommitments)) {
@@ -39,4 +54,6 @@ export function validateBlobsAndKzgCommitments(
       "Error validating execution payload during block construction: Invalid versioned hashes for blob transaction"
     );
   }
+
+  console.log("validateBlobsAndKzgCommitments: Commitments match transactions");
 }

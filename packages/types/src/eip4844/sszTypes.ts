@@ -18,7 +18,7 @@ export const BLSFieldElement = Bytes32;
 export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
 
-const BYTES_PER_FIELD_ELEMENT = 32;
+const BYTES_PER_FIELD_ELEMENT = 32; // Should we take this from the c-kzg lib?
 
 // Beacon chain
 

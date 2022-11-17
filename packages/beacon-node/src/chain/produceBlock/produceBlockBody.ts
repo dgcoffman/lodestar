@@ -208,11 +208,15 @@ export async function produceBlockBody<T extends BlockType>(
 
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
+            console.log("Got blobs bundle from EL", blobsBundle);
+
             validateBlobsAndKzgCommitments(
               payload as eip4844.ExecutionPayload,
               blobsBundle.blobs ?? [],
               blobsBundle.kzgs ?? []
             );
+
+            console.log("validateBlobsAndKzgCommitments thinks this is valid!");
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];
             blobs = blobsBundle.blobs;

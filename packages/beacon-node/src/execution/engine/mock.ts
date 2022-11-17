@@ -239,10 +239,10 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
 
     return {
-      blockHash: "",
+      blockHash: new Uint8Array(),
       kzgs: [],
       blobs: [],
-      aggregatedProof: "",
+      aggregatedProof: new Uint8Array(),
     };
   }
 

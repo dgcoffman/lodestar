@@ -1,3 +1,4 @@
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "c-kzg";
 import {RootHex, allForks, capella, eip4844} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
@@ -321,8 +322,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       getPayloadOpts
     );
-
-    return blobsBundle;
+    return parseBlobsBundle(blobsBundle);
   }
 
   /**
@@ -405,7 +405,7 @@ type EngineApiRpcReturnTypes = {
    */
   engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 
-  engine_getBlobsBundleV1: BlobsBundle;
+  engine_getBlobsBundleV1: BlobsBundleRpc;
 };
 
 type ExecutionPayloadRpc = {
@@ -425,6 +425,13 @@ type ExecutionPayloadRpc = {
   transactions: DATA[];
   withdrawals?: DATA[]; // Capella hardfork
   excessDataGas?: QUANTITY; // EIP-4844
+};
+
+type BlobsBundleRpc = {
+  blockHash: DATA;
+  kzgs: DATA[] | null;
+  blobs: DATA[] | null;
+  aggregatedProof?: DATA;
 };
 
 export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
@@ -447,8 +454,7 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
 
   // Capella adds withdrawals to the ExecutionPayload
   if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
-    // TODO Capella
-    payload.withdrawals = [];
+    payload.withdrawals = []; // TODO Capella withdrawals serialization
   }
 
   // EIP-4844 adds excessDataGas to the ExecutionPayload
@@ -457,6 +463,16 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
   }
 
   return payload;
+}
+
+const BLOB_BYTE_LENGTH = FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT;
+export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
+  return {
+    blockHash: dataToBytes(data.blockHash, 32),
+    aggregatedProof: data.aggregatedProof ? dataToBytes(data.aggregatedProof, 48) : undefined,
+    kzgs: data.kzgs?.map((kzg) => dataToBytes(kzg, 48)) ?? [],
+    blobs: data.blobs?.map((blob) => dataToBytes(blob, BLOB_BYTE_LENGTH)) ?? [],
+  };
 }
 
 export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {

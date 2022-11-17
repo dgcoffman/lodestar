@@ -1,5 +1,7 @@
 import {RootHex, allForks} from "@lodestar/types";
 import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
+import {KZGProof} from "@lodestar/types/lib/eip4844/types.js";
+import {Root} from "@lodestar/types/lib/types.js";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
@@ -56,10 +58,10 @@ export type TransitionConfigurationV1 = {
 };
 
 export type BlobsBundle = {
-  blockHash: DATA;
-  kzgs: KZGCommitment[] | null;
-  blobs: Blob[] | null;
-  aggregatedProof: DATA;
+  blockHash: Root;
+  kzgs: KZGCommitment[];
+  blobs: Blob[];
+  aggregatedProof: KZGProof | undefined;
 };
 
 /**
