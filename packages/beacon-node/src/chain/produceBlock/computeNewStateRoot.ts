@@ -13,11 +13,11 @@ export {BlockType, AssembledBlockType};
  * state is processed until block.slot already (this is to avoid double
  * epoch transition which happen at slot % 32 === 0)
  */
-export async function computeNewStateRoot(
+export function computeNewStateRoot(
   metrics: IMetrics | null,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock
-): Promise<Root> {
+): Root {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
 

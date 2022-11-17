@@ -54,13 +54,13 @@ export function processBlock(
 
   // EIP-4844 Block processing
   // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#block-processing
-  if (fork >= ForkSeq.eip4844) {
+  if (fork >= ForkSeq.eip4844 && verifyBlobs) {
     const body = block.body as eip4844.BeaconBlockBody;
+    console.log("Running state transition processBlock for block #", body.executionPayload.blockNumber);
     processBlobKzgCommitments(body);
 
     // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
     if (
-      verifyBlobs &&
       !isDataAvailable(
         blobsSidecar,
         block.slot,

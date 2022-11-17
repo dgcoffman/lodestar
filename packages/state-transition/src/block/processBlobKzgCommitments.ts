@@ -40,10 +40,13 @@ export function verifyKzgCommitmentsAgainstTransactions(
 ): boolean {
   const allVersionedHashes: VersionedHash[] = [];
   transactions.forEach((tx) => {
+    console.log("verifyKzgCommitmentsAgainstTransactions is running. Is it for a Blob tx?", tx[0] === BLOB_TX_TYPE);
     if (tx[0] === BLOB_TX_TYPE) {
       allVersionedHashes.push(...txPeekBlobVersionedHashes(tx));
     }
   });
+
+  console.log("allVersionedHashes", allVersionedHashes);
 
   return allVersionedHashes.every((hash, index) => {
     hash === kzgCommitmentToVersionedHash(kzgCommitments[index]);

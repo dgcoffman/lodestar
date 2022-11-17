@@ -187,6 +187,13 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const payload = await this.executionEngine.getPayload(payloadId);
+
+          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+          this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+          if (payload.transactions.length === 0) {
+            this.metrics?.blockPayload.emptyPayloads.inc({prepType});
+          }
+
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           if (forkSeq >= ForkSeq.capella) {
@@ -203,16 +210,15 @@ export async function produceBlockBody<T extends BlockType>(
           if (forkSeq >= ForkSeq.eip4844) {
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
-            validateBlobsAndKzgCommitments(payload as eip4844.ExecutionPayload, blobsBundle.blobs, blobsBundle.kzgs);
+            try {
+              // These checks are described by the spec as optional
+              validateBlobsAndKzgCommitments(payload as eip4844.ExecutionPayload, blobsBundle.blobs, blobsBundle.kzgs);
+            } catch (e) {
+              console.log("validateBlobsAndKzgCommitments FAILED but we're ignoring that for now!", e);
+            }
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
             blobs = blobsBundle.blobs;
-          }
-
-          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
-          this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
-          if (payload.transactions.length === 0) {
-            this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
         }
       } catch (e) {

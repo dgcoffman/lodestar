@@ -40,6 +40,4 @@ export function validateBlobsAndKzgCommitments(
       "Error validating execution payload during block construction: Invalid versioned hashes for blob transaction"
     );
   }
-
-  console.log("validateBlobsAndKzgCommitments: Commitments match transactions");
 }

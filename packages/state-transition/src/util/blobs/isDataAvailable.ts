@@ -25,6 +25,7 @@ export function isDataAvailable(
   beaconBlockRoot: Root,
   blobKzgCommitments: KZGCommitment[]
 ): boolean {
+  console.log("Running isDataAvailable");
   if (!sidecar) {
     return false;
   }
@@ -54,7 +55,7 @@ function validateBlobsSidecar(
   }
 
   // assert beacon_block_root == blobs_sidecar.beacon_block_root
-  if (beaconBlockRoot !== blobsSidecar.beaconBlockRoot) {
+  if (!typedArraysAreEqual(beaconBlockRoot, blobsSidecar.beaconBlockRoot)) {
     throw new BlobsSidecarValidationError(
       `beacon block root mismatch. Block root: ${beaconBlockRoot}, Blob root ${blobsSidecar.beaconBlockRoot}`
     );
@@ -75,4 +76,9 @@ function validateBlobsSidecar(
   if (!verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof)) {
     throw new BlobsSidecarValidationError("aggregate KZG proof validation failed.");
   }
+}
+
+function typedArraysAreEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  return a.every((val, i) => val === b[i]);
 }

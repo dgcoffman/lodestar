@@ -217,7 +217,7 @@ export function getBeaconBlockApi({
       // TODO EIP-4844 is it appropriate to do this here?
       await db.blobsSidecar.add(blobsSidecar);
 
-      console.log("Persisted blobsSidecar to the database");
+      console.log("Persisted blobsSidecar to the database", blobsSidecar.beaconBlockRoot);
 
       await Promise.all([
         network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar),
