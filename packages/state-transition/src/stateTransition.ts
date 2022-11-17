@@ -36,13 +36,13 @@ export type StateTransitionOpts = EpochProcessOpts & {
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
-export async function stateTransition(
+export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
   blobsSidecar?: BlobsSidecar,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
-): Promise<CachedBeaconStateAllForks> {
+): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true, verifyBlobs = true} = options || {};
 
   const block = signedBlock.message;

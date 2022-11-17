@@ -169,7 +169,7 @@ export class StateRegenerator implements IStateRegenerator {
       try {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
-        state = await stateTransition(
+        state = stateTransition(
           state,
           block,
           undefined,

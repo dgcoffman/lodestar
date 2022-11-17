@@ -21,7 +21,7 @@ export async function computeNewStateRoot(
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
 
-  const postState = await stateTransition(
+  const postState = stateTransition(
     state,
     blockEmptySig,
     undefined,
