@@ -73,8 +73,18 @@ function validateBlobsSidecar(
   }
 
   // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
-  if (!verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof)) {
-    throw new BlobsSidecarValidationError("aggregate KZG proof validation failed.");
+  let isProofValid = false;
+  try {
+    isProofValid = verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
+  } catch (e) {
+    // Temporary -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+    console.log("An exception was throw during verifyAggregateKzgProof. code 1 = bad arguments", e);
+    // throw e;
+    return;
+  }
+
+  if (!isProofValid) {
+    throw new BlobsSidecarValidationError(`aggregate KZG proof was not valid ${kzgAggregatedProof}`);
   }
 }
 
