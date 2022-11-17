@@ -431,7 +431,6 @@ type BlobsBundleRpc = {
   blockHash: DATA;
   kzgs: DATA[] | null;
   blobs: DATA[] | null;
-  aggregatedProof?: DATA;
 };
 
 export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
@@ -469,7 +468,6 @@ const BLOB_BYTE_LENGTH = FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT;
 export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
   return {
     blockHash: dataToBytes(data.blockHash, 32),
-    aggregatedProof: data.aggregatedProof ? dataToBytes(data.aggregatedProof, 48) : undefined,
     kzgs: data.kzgs?.map((kzg) => dataToBytes(kzg, 48)) ?? [],
     blobs: data.blobs?.map((blob) => dataToBytes(blob, BLOB_BYTE_LENGTH)) ?? [],
   };
