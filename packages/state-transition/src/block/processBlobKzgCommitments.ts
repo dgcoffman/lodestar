@@ -8,6 +8,7 @@ import {
 } from "@lodestar/types/eip4844";
 import {Transaction} from "@lodestar/types/bellatrix";
 import {digest} from "@chainsafe/as-sha256";
+import {typedArraysAreEqual} from "../util/array.js";
 
 /**
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#blob-kzg-commitments
@@ -40,17 +41,13 @@ export function verifyKzgCommitmentsAgainstTransactions(
 ): boolean {
   const allVersionedHashes: VersionedHash[] = [];
   transactions.forEach((tx) => {
-    console.log("verifyKzgCommitmentsAgainstTransactions is running. Is it for a Blob tx?", tx[0] === BLOB_TX_TYPE);
     if (tx[0] === BLOB_TX_TYPE) {
       allVersionedHashes.push(...txPeekBlobVersionedHashes(tx));
     }
   });
-
-  console.log("allVersionedHashes", allVersionedHashes);
-
-  return allVersionedHashes.every((hash, index) => {
-    hash === kzgCommitmentToVersionedHash(kzgCommitments[index]);
-  });
+  return allVersionedHashes.every((hash, index) =>
+    typedArraysAreEqual(hash, kzgCommitmentToVersionedHash(kzgCommitments[index]))
+  );
 }
 
 /**
@@ -74,6 +71,13 @@ export function verifyKzgCommitmentsAgainstTransactions(
 //         VersionedHash(opaque_tx[x:(x + 32)])
 //         for x in range(blob_versioned_hashes_offset, len(opaque_tx), 32)
 //     ]
+// Format of the blob tx relevant to this function is as follows:
+//   0: type (value should always be BlobTxType, 1 byte)
+//   1: message offset (value should always be 69, 4 bytes)
+//   5: ECDSA signature (65 bytes)
+//   70: start of "message" (192 bytes)
+//     258: start of the versioned hash offset within "message"  (4 bytes)
+//   262-: rest of the tx following message
 function txPeekBlobVersionedHashes(opaqueTx: Transaction): VersionedHash[] {
   if (opaqueTx[0] !== BLOB_TX_TYPE) {
     throw new Error("txPeekBlobVersionedHashes must be called on blob-carrying transactions only.");
@@ -83,6 +87,8 @@ function txPeekBlobVersionedHashes(opaqueTx: Transaction): VersionedHash[] {
   const messageOffset = 1 + new DataView(opaqueTx.slice(1, 5).buffer, 0).getUint32(0, true); // Should always be 70
 
   // field offset: 32 + 8 + 32 + 32 + 8 + 4 + 32 + 4 + 4 + 32 = 188
+  // 70 + 188 = 258, the start of the versioned hash offset
+  // We expect this to always be: 283
   const blobVersionedHashOffset =
     messageOffset + new DataView(opaqueTx.slice(messageOffset + 188, messageOffset + 192).buffer, 0).getUint32(0, true);
 

@@ -51,3 +51,8 @@ export function getUnparticipantValues<T>(participants: T[], values: T[]): T[] {
 
   return unparticipants;
 }
+
+export function typedArraysAreEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  return a.every((val, i) => val === b[i]);
+}
