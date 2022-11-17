@@ -192,8 +192,8 @@ export async function produceBlockBody<T extends BlockType>(
           if (forkSeq >= ForkSeq.capella) {
             // TODO EIP-4844 Remove this when the EC includes `withdrawals`
             if ((blockBody as capella.BeaconBlockBody).executionPayload.withdrawals === undefined) {
-              console.log(
-                "In Capella, but the EC returns an execution payload without withdrawals, assigning empty array"
+              this.logger?.warn(
+                "In Capella, but the EC returned an execution payload without withdrawals, assigning empty array"
               );
 
               (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
@@ -201,24 +201,11 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           if (forkSeq >= ForkSeq.eip4844) {
-            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
-            // if (payload === undefined) {
-            //   (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
-            // }
-
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
-            console.log("Got blobs bundle from EL", blobsBundle);
+            validateBlobsAndKzgCommitments(payload as eip4844.ExecutionPayload, blobsBundle.blobs, blobsBundle.kzgs);
 
-            validateBlobsAndKzgCommitments(
-              payload as eip4844.ExecutionPayload,
-              blobsBundle.blobs ?? [],
-              blobsBundle.kzgs ?? []
-            );
-
-            console.log("validateBlobsAndKzgCommitments thinks this is valid!");
-
-            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];
+            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
             blobs = blobsBundle.blobs;
           }
 
