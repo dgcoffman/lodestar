@@ -2,7 +2,7 @@ import {setMaxListeners} from "node:events";
 import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
-import {loadTrustedSetup} from "c-kzg";
+import {loadTrustedSetup, transformTrustedSetupJSON} from "c-kzg";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
@@ -70,6 +70,8 @@ enum LoggerModule {
   rest = "rest",
   sync = "sync",
 }
+
+const SETUP_FILE_PATH = "testing_trusted_setups.json";
 
 /**
  * The main Beacon Node class.  Contains various components for getting and processing data from the
@@ -147,7 +149,8 @@ export class BeaconNode {
 
     // Load our KZG trusted setup into C-KZG for later use
     try {
-      loadTrustedSetup("trusted_setup.txt");
+      const file = await transformTrustedSetupJSON(SETUP_FILE_PATH);
+      loadTrustedSetup(file);
     } catch (e) {
       logger.warn("Beacon node did not load trusted setup: ", undefined, e as Error);
     }
