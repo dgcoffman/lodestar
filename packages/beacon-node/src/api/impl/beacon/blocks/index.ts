@@ -212,12 +212,7 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, message);
 
-      console.log("BLOB SAVING 1. publishBlockWithBlobs is calling chain.processBlock");
-
-      // TODO EIP-4844 is it appropriate to do this here?
       await db.blobsSidecar.add(blobsSidecar);
-
-      console.log("Persisted blobsSidecar to the database", blobsSidecar.beaconBlockRoot);
 
       await Promise.all([
         network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar),

@@ -42,14 +42,10 @@ export async function verifyBlocksStateTransitionOnly(
 
     let blobsSidecar: BlobsSidecar | undefined;
     if (verifyBlobs) {
-      console.log("verifyBlocksStateTransitionOnly is requiring blob verification");
-
       const id = blindedOrFullBlockHashTreeRoot(config, block.message);
-      console.log("Attempting to retrieve blob with id: ", id);
       // We fetch the blobsSidecar from the DB here,
       // instead of inside stateTransition as the consensus-spec indicates.
       blobsSidecar = (await db.blobsSidecar.get(id)) ?? undefined;
-      console.log("Retreived blobs sidecar from db!", blobsSidecar);
     }
 
     // STFN - per_slot_processing() + per_block_processing()

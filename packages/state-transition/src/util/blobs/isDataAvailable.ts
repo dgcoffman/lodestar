@@ -26,7 +26,6 @@ export function isDataAvailable(
   beaconBlockRoot: Root,
   blobKzgCommitments: KZGCommitment[]
 ): boolean {
-  console.log("Running isDataAvailable");
   if (!sidecar) {
     return false;
   }
@@ -73,20 +72,10 @@ function validateBlobsSidecar(
     );
   }
 
-  // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
-  let isProofValid = false;
-  try {
-    isProofValid = verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
-  } catch (e) {
-    // Temporary -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
-    console.log("An exception was throw during verifyAggregateKzgProof. code 1 = bad arguments", e);
-    // throw e;
-    return;
-  }
-
-  // Temporary -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
-  if (!isProofValid) {
-    console.log("aggregate KZG proof was not valid", kzgAggregatedProof);
-    // throw new BlobsSidecarValidationError(`aggregate KZG proof was not valid ${kzgAggregatedProof}`);
+  // No need to verify the aggregate proof of zero blobs. Also c-kzg throws.
+  // https://github.com/dankrad/c-kzg/pull/12/files#r1025851956
+  if (blobs.length) {
+    // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
+    verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
   }
 }

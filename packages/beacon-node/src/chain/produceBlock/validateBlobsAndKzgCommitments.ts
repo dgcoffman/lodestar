@@ -3,6 +3,7 @@ import {eip4844} from "@lodestar/types";
 
 import {Blob, KZGCommitment} from "@lodestar/types/eip4844";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition/block";
+import {typedArraysAreEqual} from "@lodestar/state-transition";
 
 /**
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
@@ -27,7 +28,7 @@ export function validateBlobsAndKzgCommitments(
   // assert [blob_to_kzg_commitment(blob) == commitment for blob, commitment in zip(blobs, blob_kzg_commitments)]
   blobs.forEach((blob, index) => {
     const computedCommitment = blobToKzgCommitment(blob);
-    if (computedCommitment !== blobKzgCommitments[index]) {
+    if (!typedArraysAreEqual(computedCommitment, blobKzgCommitments[index])) {
       throw new Error(
         `Error validating execution payload during block construction: KZG commitment supplied by execution client does not match that computed by Lodestar. At index ${index}. Computed: ${computedCommitment} but blobs bundle contained ${blobKzgCommitments[index]}`
       );

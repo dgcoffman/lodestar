@@ -127,7 +127,6 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Capella and later forks have blsToExecutionChanges on BeaconBlockBody
     if (forkSeq >= ForkSeq.capella) {
-      console.log("Building a block body for Capella or later -- assigning blsToExecutionChanges");
       // TODO EIP-4844 How should this actually be set? Capella
       (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
     }
@@ -210,12 +209,8 @@ export async function produceBlockBody<T extends BlockType>(
           if (forkSeq >= ForkSeq.eip4844) {
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
-            try {
-              // These checks are described by the spec as optional
-              validateBlobsAndKzgCommitments(payload as eip4844.ExecutionPayload, blobsBundle.blobs, blobsBundle.kzgs);
-            } catch (e) {
-              console.log("validateBlobsAndKzgCommitments FAILED but we're ignoring that for now!", e);
-            }
+            // These checks are described by the spec as optional
+            validateBlobsAndKzgCommitments(payload as eip4844.ExecutionPayload, blobsBundle.blobs, blobsBundle.kzgs);
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
             blobs = blobsBundle.blobs;

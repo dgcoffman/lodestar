@@ -242,7 +242,6 @@ export class ExecutionEngineMock implements IExecutionEngine {
       blockHash: new Uint8Array(),
       kzgs: [],
       blobs: [],
-      aggregatedProof: new Uint8Array(),
     };
   }
 
