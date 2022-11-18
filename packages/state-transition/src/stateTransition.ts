@@ -2,6 +2,7 @@
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {BlobsSidecar} from "@lodestar/types/eip4844";
 import {IBeaconStateTransitionMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {
@@ -9,10 +10,17 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
-import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix, upgradeStateToCapella} from "./slot/index.js";
+import {
+  processSlot,
+  upgradeStateToAltair,
+  upgradeStateToBellatrix,
+  upgradeStateToCapella,
+  upgradeStateTo4844,
+} from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
 
@@ -22,6 +30,7 @@ export type StateTransitionOpts = EpochProcessOpts & {
   verifyStateRoot?: boolean;
   verifyProposer?: boolean;
   verifySignatures?: boolean;
+  verifyBlobs?: boolean;
 };
 
 /**
@@ -30,10 +39,11 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+  blobsSidecar?: BlobsSidecar,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true, verifyBlobs = true} = options || {};
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -60,7 +70,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, verifySignatures, null);
+    processBlock(fork, postState, block, verifySignatures, null, blobsSidecar, verifyBlobs);
   } finally {
     timer?.();
   }
@@ -152,6 +162,9 @@ function processSlotsWithTransientCache(
       }
       if (stateSlot === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
+      }
+      if (stateSlot === config.EIP4844_FORK_EPOCH) {
+        postState = upgradeStateTo4844(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

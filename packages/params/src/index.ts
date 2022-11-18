@@ -88,6 +88,9 @@ export const {
   WITHDRAWAL_QUEUE_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
+
+  FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOBS_PER_BLOCK,
 } = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
@@ -123,6 +126,9 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#domain-types
+// TODO EIP-4844: Is this still used when coupling blobs and blocks?
+export const DOMAIN_BLOBS_SIDECAR = Uint8Array.from([11, 0, 0, 0]);
 
 // Application specific domains
 

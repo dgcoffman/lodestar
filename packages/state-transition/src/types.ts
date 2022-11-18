@@ -1,3 +1,6 @@
+import {Root} from "@lodestar/types";
+import {BlobsSidecar} from "@lodestar/types/eip4844";
+
 export {EpochContext} from "./cache/epochContext.js";
 export {EpochProcess} from "./cache/epochProcess.js";
 
@@ -8,6 +11,7 @@ export {
   CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
+  CachedBeaconState4844,
 } from "./cache/stateCache.js";
 
 export {

@@ -1,3 +1,4 @@
+import {loadTrustedSetup, transformTrustedSetupJSON} from "c-kzg";
 import {IDatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
@@ -46,6 +47,8 @@ enum Status {
   running,
   closed,
 }
+
+const SETUP_FILE_PATH = "testing_trusted_setups.json";
 
 /**
  * Main class for the Validator client.
@@ -189,6 +192,14 @@ export class Validator {
 
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
+
+    // Load our KZG trusted setup into C-KZG for later use
+    try {
+      const file = await transformTrustedSetupJSON(SETUP_FILE_PATH);
+      loadTrustedSetup(file);
+    } catch (e) {
+      logger.error("Validator node did not load trusted setup: ", undefined, e as Error);
+    }
 
     return new Validator(opts, genesis, metrics);
   }

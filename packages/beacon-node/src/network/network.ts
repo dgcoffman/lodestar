@@ -11,6 +11,7 @@ import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition"
 import {altair, Epoch} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
+import {IBeaconDb} from "../db/interface.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {IReqResp, IReqRespOptions, ReqResp, ReqRespHandlers} from "./reqresp/index.js";
@@ -26,6 +27,7 @@ import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
+  db: IBeaconDb;
   libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
@@ -50,6 +52,7 @@ export class Network implements INetwork {
   private readonly libp2p: Libp2p;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
+  private readonly db: IBeaconDb;
   private readonly clock: IBeaconClock;
   private readonly chain: IBeaconChain;
   private readonly signal: AbortSignal;
@@ -57,10 +60,11 @@ export class Network implements INetwork {
   private subscribedForks = new Set<ForkName>();
 
   constructor(private readonly opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
+    const {config, db, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
+    this.db = db;
     this.signal = signal;
     this.clock = chain.clock;
     this.chain = chain;
@@ -92,7 +96,7 @@ export class Network implements INetwork {
       logger,
       metrics,
       signal,
-      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
+      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics, db}, opts),
       eth2Context: {
         activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
         currentSlot: this.clock.currentSlot,

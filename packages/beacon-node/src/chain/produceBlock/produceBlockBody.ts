@@ -3,6 +3,7 @@ import {
   phase0,
   allForks,
   altair,
+  eip4844,
   Root,
   RootHex,
   Slot,
@@ -10,6 +11,7 @@ import {
   ValidatorIndex,
   BLSPubkey,
   BLSSignature,
+  capella,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -22,14 +24,14 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
-
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -74,7 +76,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<AssembledBodyType<T>> {
+): Promise<{body: AssembledBodyType<T>; blobs: eip4844.Blobs | null}> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
   // are included in the operation pool.
@@ -90,6 +92,9 @@ export async function produceBlockBody<T extends BlockType>(
   const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
+
+  // We assign this in an EIP-4844 branch below and return it
+  let blobs: eip4844.Blobs | null = null;
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -111,11 +116,20 @@ export async function produceBlockBody<T extends BlockType>(
     );
   }
 
+  const forkSeq = currentState.config.getForkSeq(blockSlot);
   const forkName = currentState.config.getForkName(blockSlot);
+
   if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
+    // Bellatrix, Capella, or 4844
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
+
+    // Capella and later forks have blsToExecutionChanges on BeaconBlockBody
+    if (forkSeq >= ForkSeq.capella) {
+      // TODO EIP-4844 How should this actually be set? Capella
+      (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
+    }
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
@@ -146,13 +160,16 @@ export async function produceBlockBody<T extends BlockType>(
       // are pre-merge. We don't care the same for builder segment as the execution block
       // will takeover if the builder flow was activated and errors
       try {
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
+
         const prepareRes = await prepareExecutionPayload(
           this,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState as CachedBeaconStateBellatrix,
+          currentState as CachedBeaconStateExecutions,
           feeRecipient
         );
+
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             forkName
@@ -167,13 +184,36 @@ export async function produceBlockBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
+
           const payload = await this.executionEngine.getPayload(payloadId);
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
           if (payload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
+          }
+
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
+
+          if (forkSeq >= ForkSeq.capella) {
+            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
+            if ((blockBody as capella.BeaconBlockBody).executionPayload.withdrawals === undefined) {
+              this.logger?.warn(
+                "In Capella, but the EC returned an execution payload without withdrawals, assigning empty array"
+              );
+
+              (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
+            }
+          }
+
+          if (forkSeq >= ForkSeq.eip4844) {
+            const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
+
+            // These checks are described by the spec as optional
+            validateBlobsAndKzgCommitments(payload as eip4844.ExecutionPayload, blobsBundle.blobs, blobsBundle.kzgs);
+
+            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
+            blobs = blobsBundle.blobs;
           }
         }
       } catch (e) {
@@ -199,7 +239,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  return blockBody as AssembledBodyType<T>;
+  return {body: blockBody as AssembledBodyType<T>, blobs};
 }
 
 /**

@@ -37,6 +37,9 @@ export type IChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: Uint8Array;
   CAPELLA_FORK_EPOCH: number;
+  // EIP-4844
+  EIP4844_FORK_VERSION: Uint8Array;
+  EIP4844_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -59,6 +62,11 @@ export type IChainConfig = {
   DEPOSIT_CHAIN_ID: number;
   DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
+
+  // Blobs
+  // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#configuration
+  MAX_REQUEST_BLOBS_SIDECARS: number;
+  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: number;
 };
 
 export const chainConfigTypes: SpecTypes<IChainConfig> = {
@@ -86,6 +94,9 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   // Capella
   CAPELLA_FORK_VERSION: "bytes",
   CAPELLA_FORK_EPOCH: "number",
+  // EIP-4844
+  EIP4844_FORK_VERSION: "bytes",
+  EIP4844_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -108,6 +119,10 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   DEPOSIT_CHAIN_ID: "number",
   DEPOSIT_NETWORK_ID: "number",
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
+
+  // Blobs
+  MAX_REQUEST_BLOBS_SIDECARS: "number",
+  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: "number",
 };
 
 /** Allows values in a Spec file */

@@ -14,6 +14,7 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobsSidecarRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
@@ -28,6 +29,9 @@ export interface IBeaconDb {
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
+
+  // EIP-4844 blobs sidecars
+  blobsSidecar: BlobsSidecarRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;

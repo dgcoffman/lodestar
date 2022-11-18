@@ -2,7 +2,7 @@ import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {IPeerRpcScoreStore} from "../peers/index.js";
 import {MetadataController} from "../metadata.js";
@@ -29,6 +29,9 @@ export interface IReqResp {
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
   lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
   lightClientUpdate(peerId: PeerId, request: altair.LightClientUpdatesByRange): Promise<altair.LightClientUpdate[]>;
+
+  // EIP-4844
+  blobsSidecarsByRange(peerId: PeerId, request: eip4844.BlobsSidecarsByRangeRequest): Promise<eip4844.BlobsSidecar[]>;
 }
 
 export interface IReqRespModules {

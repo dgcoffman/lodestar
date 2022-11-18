@@ -1,9 +1,12 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock} from "@lodestar/types";
+import {computeAggregateKzgProof} from "c-kzg";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock, eip4844, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@lodestar/api";
+import {Blobs, BlobsSidecar} from "@lodestar/types/eip4844";
+import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -76,7 +79,7 @@ export class BlockProposingService {
       const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
 
-      const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
+      const {block, blobs, blockDebugLogCtx} = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
         strictFeeRecipientCheck,
         isBuilderEnabled,
@@ -85,22 +88,57 @@ export class BlockProposingService {
         throw extendError(e, "Failed to produce block");
       });
 
-      this.logger.debug("Produced block", {...debugLogCtx, ...block.debugLogCtx});
+      this.logger.debug("Produced block", {...debugLogCtx, ...blockDebugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot);
 
       this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
 
-      await this.publishBlockWrapper(signedBlock).catch((e: Error) => {
+      const onPublishError = (e: Error): void => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
-      });
-      this.logger.info("Published block", {...logCtx, graffiti, ...block.debugLogCtx});
+      };
+
+      if (this.config.getForkSeq(block.slot) >= ForkSeq.eip4844) {
+        if (!blobs) {
+          return onPublishError(new Error("Produced an EIP-4844 block but it was missing blobs!"));
+        }
+
+        const signedBlockWithBlobs = ssz.eip4844.SignedBeaconBlockAndBlobsSidecar.defaultValue();
+        signedBlockWithBlobs.beaconBlock = signedBlock as eip4844.SignedBeaconBlock;
+        signedBlockWithBlobs.blobsSidecar = this.getBlobsSidecar(block, blobs);
+
+        // TODO EIP-4844: Blinded blocks??? No clue!
+        await this.api.beacon.publishBlockWithBlobs(signedBlockWithBlobs).catch(onPublishError);
+      } else {
+        await this.publishBlockWrapper(signedBlock).catch(onPublishError);
+      }
+
+      this.logger.info("Published block", {...logCtx, graffiti, ...blockDebugLogCtx});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
+  }
+
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
+   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobsSidecar:
+   *   return BlobsSidecar(
+   *       beacon_block_root=hash_tree_root(block),
+   *       beacon_block_slot=block.slot,
+   *       blobs=blobs,
+   *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
+   *   )
+   */
+  private getBlobsSidecar(block: allForks.FullOrBlindedBeaconBlock, blobs: Blobs): BlobsSidecar {
+    return {
+      beaconBlockRoot: blindedOrFullBlockHashTreeRoot(this.config, block),
+      beaconBlockSlot: block.slot,
+      blobs,
+      kzgAggregatedProof: computeAggregateKzgProof(blobs),
+    };
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
@@ -118,7 +156,12 @@ export class BlockProposingService {
       strictFeeRecipientCheck,
       isBuilderEnabled,
     }: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean; isBuilderEnabled: boolean}
-  ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
+  ): Promise<{
+    block: allForks.FullOrBlindedBeaconBlock;
+    blockDebugLogCtx: Record<string, string>;
+    blobs: eip4844.Blobs | undefined;
+  }> => {
+    // TODO EIP-4844: How does 4844 interact with the Builder API?
     const blindedBlockPromise = isBuilderEnabled
       ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
           this.logger.error("Failed to produce builder block", {}, e as Error);
@@ -138,10 +181,11 @@ export class BlockProposingService {
 
     // A metric on the choice between blindedBlock and normal block can be applied
     if (blindedBlock) {
-      const debugLogCtx = {source: "builder"};
-      return {...blindedBlock, debugLogCtx};
+      const blockDebugLogCtx = {source: "builder"};
+      // TODO EIP-4844: What are we doing with blobs for blinded blocks?
+      return {block: blindedBlock.data, blockDebugLogCtx, blobs: []};
     } else {
-      const debugLogCtx = {source: "engine"};
+      const blockDebugLogCtx = {source: "engine"};
       if (!fullBlock) {
         throw Error("Failed to produce engine or builder block");
       }
@@ -163,26 +207,28 @@ export class BlockProposingService {
         if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
-        Object.assign(debugLogCtx, {feeRecipient});
+        Object.assign(blockDebugLogCtx, {feeRecipient});
       }
-      return {...fullBlock, debugLogCtx};
-      // throw Error("random")
+      return {block: fullBlock.data, blockDebugLogCtx, blobs: fullBlock.blobs};
     }
   };
 
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: Api["validator"]["produceBlock"] = async (
-    slot,
-    randaoReveal,
-    graffiti
-  ): Promise<{data: allForks.BeaconBlock}> => {
+  private produceBlock = async (
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: allForks.BeaconBlock; blobs?: Blobs}> => {
     switch (this.config.getForkName(slot)) {
       case ForkName.phase0:
         return this.api.validator.produceBlock(slot, randaoReveal, graffiti);
-      // All subsequent forks are expected to use v2 too
       case ForkName.altair:
-      default:
+      case ForkName.bellatrix:
+      case ForkName.capella:
         return this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+      default:
+        // EIP-4844 and later
+        return this.api.validator.produceBlockWithBlobs(slot, randaoReveal, graffiti);
     }
   };
 }

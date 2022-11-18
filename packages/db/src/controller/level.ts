@@ -77,6 +77,19 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     }
   }
 
+  async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<Uint8Array[] | null> {
+    try {
+      this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+      this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+      return (await this.db.getMany(keys)) as Uint8Array[] | null;
+    } catch (e) {
+      if ((e as LevelDbError).code === "LEVEL_NOT_FOUND") {
+        return null;
+      }
+      throw e;
+    }
+  }
+
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);

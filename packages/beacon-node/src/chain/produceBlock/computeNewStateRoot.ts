@@ -1,6 +1,8 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
+
 import {allForks, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
+
 import {IMetrics} from "../../metrics/index.js";
 import {BlockType, AssembledBlockType} from "./produceBlockBody.js";
 
@@ -22,10 +24,12 @@ export function computeNewStateRoot(
   const postState = stateTransition(
     state,
     blockEmptySig,
+    undefined,
     // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
     // verifyProposer: false   | as the block signature is zero-ed
     // verifySignatures: false | since the data to assemble the block is trusted
-    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false},
+    // verifyBlobs: false      | since we do not have blobs saved yet
+    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false, verifyBlobs: false},
     metrics
   );
 

@@ -44,10 +44,11 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       let state = createCachedBeaconStateTest(testcase.pre, testConfig);
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-        state = stateTransition(state, signedBlock, {
+        state = stateTransition(state, signedBlock, undefined, {
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,
+          verifyBlobs: false,
           assertCorrectProgressiveBalances,
         });
       }
@@ -84,6 +85,8 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<IChainC
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: forkEpoch};
     case ForkName.capella:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: forkEpoch};
+    case ForkName.eip4844:
+      return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, EIP4844_FORK_EPOCH: forkEpoch};
   }
 }
 

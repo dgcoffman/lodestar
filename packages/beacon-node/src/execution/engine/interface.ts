@@ -1,4 +1,6 @@
 import {RootHex, allForks} from "@lodestar/types";
+import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
+import {Root} from "@lodestar/types/lib/types.js";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
@@ -54,6 +56,12 @@ export type TransitionConfigurationV1 = {
   terminalBlockNumber: QUANTITY;
 };
 
+export type BlobsBundle = {
+  blockHash: Root;
+  kzgs: KZGCommitment[];
+  blobs: Blob[];
+};
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -100,6 +108,22 @@ export interface IExecutionEngine {
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
   getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+
+  /**
+   * "After retrieving the execution payload from the execution engine as specified in Bellatrix,
+   * use the payload_id to retrieve blobs and blob_kzg_commitments
+   * via get_blobs_and_kzg_commitments(payload_id)."
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
+   *
+   * This function calls the Engine API method engine_getBlobsBundleV1, what the consensus-spec
+   * describes as `get_blobs_and_kzg_commitments(payload_id)`.
+   *
+   * The Engine API spec is in PR: https://github.com/ethereum/execution-apis/pull/197
+   *
+   * @param payloadId
+   * @returns BlobsBundle
+   */
+  getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle>;
 
   exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1

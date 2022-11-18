@@ -38,5 +38,10 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
       const updateRequest = requestBody as RequestBodyByMethod[Method.LightClientUpdate];
       return `${updateRequest.startPeriod},${updateRequest.count}`;
     }
+
+    case Method.BlobsSidecarsByRange: {
+      const range = requestBody as RequestBodyByMethod[Method.BlobsSidecarsByRange];
+      return `${range.startSlot},${range.count}`;
+    }
   }
 }

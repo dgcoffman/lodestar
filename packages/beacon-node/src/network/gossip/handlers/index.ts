@@ -3,6 +3,9 @@ import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {ILogger, prettyBytes} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types/lib/phase0/types.js";
+import {ForkName} from "@lodestar/params";
+import {BlobsSidecar} from "@lodestar/types/eip4844";
 import {IMetrics} from "../../../metrics/index.js";
 import {OpSource} from "../../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -31,6 +34,7 @@ import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
+import {IBeaconDb} from "../../../db/interface.js";
 
 /**
  * Gossip handler options as part of network options
@@ -53,6 +57,7 @@ type ValidatorFnsModules = {
   logger: ILogger;
   network: INetwork;
   metrics: IMetrics | null;
+  db: IBeaconDb;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -72,71 +77,90 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {chain, config, metrics, network, logger} = modules;
+  const {chain, config, metrics, network, logger, db} = modules;
 
-  return {
-    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      const slot = signedBlock.message.slot;
-      const forkTypes = config.getForkTypes(slot);
-      const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-      logger.verbose("Received gossip block", {
-        slot: slot,
-        root: blockHex,
-        curentSlot: chain.clock.currentSlot,
-        peerId: peerIdStr,
-        delaySec,
-      });
+  async function handleBeaconBlock(
+    signedBlock: SignedBeaconBlock,
+    blobsSidecar: BlobsSidecar | undefined,
+    fork: ForkName,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): Promise<void> {
+    const slot = signedBlock.message.slot;
+    const forkTypes = config.getForkTypes(slot);
+    const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    logger.verbose("Received gossip block", {
+      slot: slot,
+      root: blockHex,
+      curentSlot: chain.clock.currentSlot,
+      peerId: peerIdStr,
+      delaySec,
+    });
 
-      try {
-        await validateGossipBlock(config, chain, signedBlock, topic.fork);
-      } catch (e) {
-        if (e instanceof BlockGossipError) {
-          if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, peerIdStr);
-          }
+    try {
+      await validateGossipBlock(config, chain, signedBlock, fork);
+      // TODO EIP-4844 Is this correct? It does have to happen before the chain.processBlock below
+      if (blobsSidecar) {
+        await db.blobsSidecar.add(blobsSidecar);
+      }
+    } catch (e) {
+      if (e instanceof BlockGossipError) {
+        if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+          logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
+          network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, peerIdStr);
         }
-
-        if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
-        }
-
-        throw e;
       }
 
-      // Handler - MUST NOT `await`, to allow validation result to be propagated
+      if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
+        chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
+      }
 
-      metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+      throw e;
+    }
 
-      // `validProposerSignature = true`, in gossip validation the proposer signature is checked
-      // At gossip time, it's critical to keep a good number of mesh peers.
-      // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
-      // Gossip Job Wait Time depends on the BLS Job Wait Time
-      // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
-      // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
-      // See https://github.com/ChainSafe/lodestar/issues/3792
-      chain
-        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
-        .then(() => {
-          // Returns the delay between the start of `block.slot` and `current time`
-          const delaySec = chain.clock.secFromSlot(slot);
-          metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-        })
-        .catch((e) => {
-          if (e instanceof BlockError) {
-            switch (e.type.code) {
-              case BlockErrorCode.ALREADY_KNOWN:
-              case BlockErrorCode.PARENT_UNKNOWN:
-              case BlockErrorCode.PRESTATE_MISSING:
-              case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-                break;
-              default:
-                network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
-            }
+    // Handler - MUST NOT `await`, to allow validation result to be propagated
+
+    metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+
+    // `validProposerSignature = true`, in gossip validation the proposer signature is checked
+    // At gossip time, it's critical to keep a good number of mesh peers.
+    // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+    // Gossip Job Wait Time depends on the BLS Job Wait Time
+    // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+    // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+    // See https://github.com/ChainSafe/lodestar/issues/3792
+    chain
+      .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
+      .then(() => {
+        // Returns the delay between the start of `block.slot` and `current time`
+        const delaySec = chain.clock.secFromSlot(slot);
+        metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+      })
+      .catch((e) => {
+        if (e instanceof BlockError) {
+          switch (e.type.code) {
+            case BlockErrorCode.ALREADY_KNOWN:
+            case BlockErrorCode.PARENT_UNKNOWN:
+            case BlockErrorCode.PRESTATE_MISSING:
+            case BlockErrorCode.EXECUTION_ENGINE_ERROR:
+              break;
+            default:
+              network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
           }
-          logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
-        });
+        }
+        logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+      });
+  }
+
+  return {
+    [GossipType.beacon_block_and_blobs_sidecar]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
+      const {beaconBlock, blobsSidecar} = signedBlock;
+      return handleBeaconBlock(beaconBlock, blobsSidecar, topic.fork, peerIdStr, seenTimestampSec);
+    },
+
+    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
+      return handleBeaconBlock(signedBlock, undefined, topic.fork, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {

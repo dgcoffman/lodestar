@@ -172,10 +172,12 @@ export class StateRegenerator implements IStateRegenerator {
         state = stateTransition(
           state,
           block,
+          undefined,
           {
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,
+            verifyBlobs: false,
           },
           null
         );
